@@ -1,0 +1,49 @@
+version: "2"
+
+services:                        #控制image的运行方式
+  tomcat:                        #编排文件中容器的别名
+    build: ./tomcat              #从当前文件目录下的tomcat文件夹下寻找Dockerfile文件开始构建tomcat镜像
+    image: tomcat-ssm            #构建之后镜像的名字
+    container_name: tomcat-ssm   #容器的名字
+    restart: always              #容器重启之后总是会重新构建本镜像
+    depends_on:                  #依赖于mysql和redis，目的是为了在mysql和redis启动之后再启动本容器
+      - mysql
+      - redis
+    ports:
+      - "8888:8080"              #冒号左边的8888代表宿主机中的端口，右边的8080代表容器中的端口
+
+  mysql:
+    build: ./mysql
+    image: mysql-ssm:mysql
+    container_name: mysql-ssm
+    restart: always
+    ports:
+      - "3301:3306"
+    volumes:                     #这里多挂载了一个conf文件，目的就是为了防止mysql原始配置文件不生效，产生乱码的情况
+      - "/temp/test/docker-ssm/conf:/etc/mysql/conf.d"
+      - "/temp/test/docker-ssm/logs:/logs"
+      - "/temp/test/docker-ssm/data:/var/lib/mysql"
+    command: [
+      '--character-set-server=utf8mb4',
+      '--collation-server=utf8mb4_unicode_ci'
+    ]
+    environment:                #在mysql初始化的时候设置登陆密码
+      MYSQL_ROOT_PASSWORD: "root"
+
+  redis:
+    image: redis:latest          #如果本地有该名称的镜像，那么就拉取本地的镜像，如果本地没有，则从数据仓库中拉取最新版的镜像
+    container_name: redis-ssm
+    restart: always
+    ports:
+      - "6380:6379"
+    volumes:
+      - "/temp/test/docker-ssm/redis_data:/data"
+
+      #将宿主机上的redis_data文件挂载到本容器上的/data上，达到数据持久化
+      #需要注意的是，如果volume是空的而container中的目录有内容，那么docker会将container目录中的内容拷贝到volume中
+      #但是如果volume中已经有内容，则会将container中的目录覆盖
+
+
+
+
+
